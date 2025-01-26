@@ -1,5 +1,5 @@
-#include "esphome/core/log.h"
-#include "esphome/components/i2c/i2c_bus.h"
+#include <esphome/core/log.h>
+#include <esphome/components/i2c/i2c_bus.h>
 #include "bm8563.h"
 
 namespace esphome {

@@ -3,7 +3,8 @@ import esphome.config_validation as cv
 from esphome.components import i2c
 from esphome.const import CONF_ID, CONF_SLEEP_DURATION
 
-DEPENDENCIES = ['i2c']
+DEPENDENCIES = ('i2c',)
+AUTO_LOAD = ('sensor',)
 
 CONF_I2C_ADDR = 0x51
 
