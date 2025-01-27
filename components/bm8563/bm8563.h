@@ -1,61 +1,66 @@
 #pragma once
 
 #include <esphome/core/component.h>
-#include <esphome/components/sensor/sensor.h>
 #include <esphome/components/i2c/i2c.h>
+#include <esphome/components/time/real_time_clock.h>
 
 
 namespace esphome {
 namespace bm8563 {
 
-typedef struct
-{
-  int8_t hours;
-  int8_t minutes;
-  int8_t seconds;
-} BM8563_TimeTypeDef;
+class BM8563Component : public time::RealTimeClock, public i2c::I2CDevice {
+ public:
+  void setup() override;
+  void update() override;
+  void dump_config() override;
+  float get_setup_priority() const override;
+  void read_time();
+  void write_time();
 
-typedef struct
-{
-  int8_t weekDay;
-  int8_t month;
-  int8_t date;
-  int16_t year;
-} BM8563_DateTypeDef;
+ protected:
+  bool read_rtc_();
+  bool write_rtc_();
+  union BM8563Reg {
+    struct {
+      uint8_t second : 4;
+      uint8_t second_10 : 3;
+      bool vl : 1;
 
-class BM8563 : public Component, public i2c::I2CDevice {
-  public:
-    void setup() override;
-    void loop() override;
-    void dump_config() override;
-    
-    void set_sleep_duration(uint32_t time_ms);
+      uint8_t minute : 4;
+      uint8_t minute_10 : 3;
+      uint8_t unused_1 : 1;
 
-    bool getVoltLow();
+      uint8_t hour : 4;
+      uint8_t hour_10 : 2;
+      uint8_t unused_2 : 2;
 
-    void getTime(BM8563_TimeTypeDef* BM8563_TimeStruct);
-    void getDate(BM8563_DateTypeDef* BM8563_DateStruct);
+      uint8_t weekday : 3;
+      uint8_t unused_3 : 5;
 
-    void setTime(BM8563_TimeTypeDef* BM8563_TimeStruct);
-    void setDate(BM8563_DateTypeDef* BM8563_DateStruct);
+      uint8_t day : 4;
+      uint8_t day_10 : 2;
+      uint8_t unused_4 : 2;
 
-    int SetAlarmIRQ(int afterSeconds);
-    int SetAlarmIRQ(const BM8563_TimeTypeDef &BM8563_TimeStruct);
-    int SetAlarmIRQ(const BM8563_DateTypeDef &BM8563_DateStruct, const BM8563_TimeTypeDef &BM8563_TimeStruct);
+      uint8_t month : 4;
+      uint8_t month_10 : 1;
+      uint8_t unused_5 : 2;
+      uint8_t century : 1;
 
-    void clearIRQ();
-    void disableIRQ();
+      uint8_t year : 4;
+      uint8_t year_10 : 4;
+    } reg;
+    mutable uint8_t raw[sizeof(reg)];
+  } bm8563_;
+};
 
-    void WriteReg(uint8_t reg, uint8_t data);
-    uint8_t ReadReg(uint8_t reg);
+template<typename... Ts> class WriteAction : public Action<Ts...>, public Parented<BM8563Component> {
+ public:
+  void play(Ts... x) override { this->parent_->write_time(); }
+};
 
-  private:
-    uint8_t bcd2ToByte(uint8_t value);
-    uint8_t byteToBcd2(uint8_t value);
-
-    uint8_t trdata[7];
-    optional<uint64_t> sleep_duration_;
-    bool setupComplete;
+template<typename... Ts> class ReadAction : public Action<Ts...>, public Parented<BM8563Component> {
+ public:
+  void play(Ts... x) override { this->parent_->read_time(); }
 };
 
 }  // namespace bm8563
